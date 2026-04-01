@@ -1,0 +1,17 @@
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+server:
+  port: ${SERVER_PORT:8086}
+
+polymarket:
+  websocket:
+    enabled: ${POLYMARKET_WEBSOCKET_ENABLED:true}
+    url: ${POLYMARKET_WEBSOCKET_URL}
+    ping-interval: ${POLYMARKET_WEBSOCKET_PING_INTERVAL:10s}
+    reconnect-delay: ${POLYMARKET_WEBSOCKET_RECONNECT_DELAY:5s}
+    custom-feature-enabled: ${POLYMARKET_WEBSOCKET_CUSTOM_FEATURE_ENABLED:true}

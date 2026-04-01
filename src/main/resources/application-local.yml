@@ -1,0 +1,23 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5434/poly_price_watcher
+    username: poly_price_watcher
+    password: poly_price_watcher
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    show-sql: true
+
+server:
+  port: 8086
+
+logging:
+  level:
+    com.polymarket.pricewatcher: DEBUG
+
+polymarket:
+  websocket:
+    enabled: true
+    url: wss://ws-subscriptions-clob.polymarket.com/ws/market
+    ping-interval: 10s
+    reconnect-delay: 5s
+    custom-feature-enabled: true

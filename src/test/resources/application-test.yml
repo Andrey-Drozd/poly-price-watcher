@@ -1,0 +1,44 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:poly-price-watcher-test;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+
+server:
+  port: 0
+
+polymarket:
+  websocket:
+    enabled: false
+    url: ws://localhost/test
+    ping-interval: 10s
+    reconnect-delay: 100ms
+    custom-feature-enabled: true
+  markets:
+    mode: static
+    min-tracked-count: 3
+    tracked:
+      - asset-id: "test-asset-1"
+        market-id: "test-market-1"
+        condition-id: "test-condition-1"
+        market-slug: "test-market-one"
+        market-question: "Test market one?"
+        outcome: "Yes"
+      - asset-id: "test-asset-2"
+        market-id: "test-market-2"
+        condition-id: "test-condition-2"
+        market-slug: "test-market-two"
+        market-question: "Test market two?"
+        outcome: "No"
+      - asset-id: "test-asset-3"
+        market-id: "test-market-3"
+        condition-id: "test-condition-3"
+        market-slug: "test-market-three"
+        market-question: "Test market three?"
+        outcome: "Yes"

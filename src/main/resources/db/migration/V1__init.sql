@@ -1,0 +1,3 @@
+-- Stage 1 baseline migration.
+-- Intentionally empty.
+-- Domain tables will be added in the next migration once the persistence model is finalized.

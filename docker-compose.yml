@@ -1,0 +1,44 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: poly-price-watcher-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-poly_price_watcher}
+      POSTGRES_USER: ${POSTGRES_USER:-poly_price_watcher}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-poly_price_watcher}
+    ports:
+      - "${POSTGRES_PORT:-5434}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-poly_price_watcher} -d ${POSTGRES_DB:-poly_price_watcher}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: poly-price-watcher-app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SERVER_PORT: ${SERVER_PORT:-8086}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-poly_price_watcher}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-poly_price_watcher}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-poly_price_watcher}
+      POLYMARKET_WEBSOCKET_ENABLED: ${POLYMARKET_WEBSOCKET_ENABLED:-true}
+      POLYMARKET_WEBSOCKET_URL: ${POLYMARKET_WEBSOCKET_URL:-wss://ws-subscriptions-clob.polymarket.com/ws/market}
+      POLYMARKET_WEBSOCKET_PING_INTERVAL: ${POLYMARKET_WEBSOCKET_PING_INTERVAL:-10s}
+      POLYMARKET_WEBSOCKET_RECONNECT_DELAY: ${POLYMARKET_WEBSOCKET_RECONNECT_DELAY:-5s}
+      POLYMARKET_WEBSOCKET_CUSTOM_FEATURE_ENABLED: ${POLYMARKET_WEBSOCKET_CUSTOM_FEATURE_ENABLED:-true}
+    ports:
+      - "${SERVER_PORT:-8086}:8086"
+
+volumes:
+  postgres-data:

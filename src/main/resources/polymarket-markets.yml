@@ -1,0 +1,32 @@
+polymarket:
+  markets:
+    mode: static
+    min-tracked-count: 3
+    tracked:
+      # Required right now:
+      # - asset-id is the only field used for market WebSocket subscription.
+      #
+      # Stored as metadata for logs/DB and possible future extensions:
+      # - market-id
+      # - condition-id
+      # - market-slug
+      # - market-question
+      # - outcome
+      - asset-id: "48764428286656921488851644351774667118009263342042758531252625616470924946480"
+        market-id: "1507751"
+        condition-id: "0xe443dab97ad8b7f58558cc7a6a3932d156031e962a451e0461e9a4578d78fe84"
+        market-slug: "will-the-iranian-regime-fall-by-april-30"
+        market-question: "Will the Iranian regime fall by April 30?"
+        outcome: "Yes"
+      - asset-id: "85191934649046129480174964255278880752271767733539167443243111973456166096127"
+        market-id: "1569627"
+        condition-id: "0x773abaa5fe55e5cde51a261f444b7921652a4e059ead6b3be9fe56499c2d4609"
+        market-slug: "us-x-iran-ceasefire-by-april-15-182-528-637"
+        market-question: "US x Iran ceasefire by April 15?"
+        outcome: "Yes"
+      - asset-id: "2916184120206223749839849644877707470354946028257066951797428049170871002238"
+        market-id: "1640919"
+        condition-id: "0x6d0e09d0f04572d9b1adad84703458b0297bc5603b69dccbde93147ee4443246"
+        market-slug: "us-forces-enter-iran-by-april-30-899"
+        market-question: "US forces enter Iran by April 30?"
+        outcome: "Yes"
