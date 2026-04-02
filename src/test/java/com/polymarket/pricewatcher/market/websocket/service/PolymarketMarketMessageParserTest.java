@@ -60,6 +60,32 @@ class PolymarketMarketMessageParserTest {
     }
 
     @Test
+    void shouldParseOrderBookUsingHighestBidAndLowestAskFromUnsortedLevels() {
+        List<ObservedMarketPrice> prices = parser.parse("""
+                {
+                  "event_type": "book",
+                  "asset_id": "asset-123",
+                  "bids": [
+                    {"price": "0.48", "size": "30"},
+                    {"price": "0.50", "size": "15"},
+                    {"price": "0.49", "size": "10"}
+                  ],
+                  "asks": [
+                    {"price": "0.56", "size": "25"},
+                    {"price": "0.54", "size": "10"},
+                    {"price": "0.55", "size": "5"}
+                  ],
+                  "timestamp": "1757908892351"
+                }
+                """);
+
+        assertThat(prices).singleElement().satisfies(price -> {
+            assertThat(price.price()).isEqualByComparingTo("0.52000000");
+            assertThat(price.priceSource()).isEqualTo(PriceSource.ORDER_BOOK);
+        });
+    }
+
+    @Test
     void shouldPreferBestBidAskMidpointInsidePriceChangeMessage() {
         List<ObservedMarketPrice> prices = parser.parse("""
                 {
