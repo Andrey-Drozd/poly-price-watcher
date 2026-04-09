@@ -203,28 +203,33 @@ class PriceTrackingServiceTest {
         PriceChangeEvent persistedEvent = mock(PriceChangeEvent.class);
         when(persistedEvent.getId()).thenReturn(42L);
 
+        // Block repository.save() so the first thread holds the lock
         CountDownLatch repositoryEntered = new CountDownLatch(1);
         CountDownLatch allowRepositoryReturn = new CountDownLatch(1);
         when(repository.save(any(PriceChangeEvent.class))).thenAnswer(invocation -> {
             repositoryEntered.countDown();
-            assertThat(allowRepositoryReturn.await(2, TimeUnit.SECONDS)).isTrue();
+            assertThat(allowRepositoryReturn.await(5, TimeUnit.SECONDS)).isTrue();
             return persistedEvent;
         });
 
-        ExecutorService executorService = Executors.newFixedThreadPool(2);
+        ExecutorService thread1 = Executors.newSingleThreadExecutor();
+        ExecutorService thread2 = Executors.newSingleThreadExecutor();
         try {
-            Future<PriceTrackingResult> changedFuture = executorService.submit(() -> priceTrackingService.registerPrice(
+            // Thread 1: acquires lock, enters repository.save(), blocks
+            Future<PriceTrackingResult> changedFuture = thread1.submit(() -> priceTrackingService.registerPrice(
                     market,
                     new BigDecimal("0.525"),
                     PriceSource.PRICE_CHANGE,
                     Instant.parse("2026-04-01T10:17:30Z")
             ));
 
+            // Wait until Thread 1 is inside repository.save() with the lock held
             assertThat(repositoryEntered.await(2, TimeUnit.SECONDS)).isTrue();
 
-            CountDownLatch secondTaskStarted = new CountDownLatch(1);
-            Future<PriceTrackingResult> staleFuture = executorService.submit(() -> {
-                secondTaskStarted.countDown();
+            // Thread 2: will try to acquire the same lock — must block until Thread 1 releases
+            CountDownLatch thread2Started = new CountDownLatch(1);
+            Future<PriceTrackingResult> staleFuture = thread2.submit(() -> {
+                thread2Started.countDown();
                 return priceTrackingService.registerPrice(
                         market,
                         new BigDecimal("0.520"),
@@ -233,17 +238,22 @@ class PriceTrackingServiceTest {
                 );
             });
 
-            assertThat(secondTaskStarted.await(2, TimeUnit.SECONDS)).isTrue();
-            Thread.sleep(100);
+            // Wait for Thread 2 to enter registerPrice and attempt to acquire the lock
+            assertThat(thread2Started.await(2, TimeUnit.SECONDS)).isTrue();
+
+            // Thread 2 should NOT complete yet since the lock is held by Thread 1
             assertThat(staleFuture.isDone()).isFalse();
 
+            // Release Thread 1 — lock is freed, Thread 2 can proceed
             allowRepositoryReturn.countDown();
 
-            assertThat(changedFuture.get(2, TimeUnit.SECONDS).status()).isEqualTo(PriceTrackingStatus.CHANGED);
-            assertThat(staleFuture.get(2, TimeUnit.SECONDS).status()).isEqualTo(PriceTrackingStatus.STALE);
+            // Both must complete with expected statuses
+            assertThat(changedFuture.get(5, TimeUnit.SECONDS).status()).isEqualTo(PriceTrackingStatus.CHANGED);
+            assertThat(staleFuture.get(5, TimeUnit.SECONDS).status()).isEqualTo(PriceTrackingStatus.STALE);
             verify(repository).save(any(PriceChangeEvent.class));
         } finally {
-            executorService.shutdownNow();
+            thread1.shutdownNow();
+            thread2.shutdownNow();
         }
     }
 

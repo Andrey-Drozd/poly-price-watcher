@@ -8,13 +8,13 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
 
 @Component
-public class TrackedMarketStartupLogger implements ApplicationRunner {
+public class TrackedMarketStartupReporter implements ApplicationRunner {
 
-    private static final Logger log = LoggerFactory.getLogger(TrackedMarketStartupLogger.class);
+    private static final Logger log = LoggerFactory.getLogger(TrackedMarketStartupReporter.class);
 
     private final ConfiguredTrackedMarketService configuredTrackedMarketService;
 
-    public TrackedMarketStartupLogger(ConfiguredTrackedMarketService configuredTrackedMarketService) {
+    public TrackedMarketStartupReporter(ConfiguredTrackedMarketService configuredTrackedMarketService) {
         this.configuredTrackedMarketService = configuredTrackedMarketService;
     }
 

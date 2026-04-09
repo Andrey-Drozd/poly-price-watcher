@@ -56,4 +56,48 @@ class PriceChangeEventRepositoryTest {
         assertThat(events.get(0).getCurrentPrice()).isEqualByComparingTo("0.43000000");
         assertThat(events.get(1).getCurrentPrice()).isEqualByComparingTo("0.45000000");
     }
+
+    @Test
+    void findHistoryByAssetIdShouldReturnEmptyForUnknownAsset() {
+        List<PriceChangeEvent> events = repository.findHistoryByAssetId("nonexistent-asset");
+
+        assertThat(events).isEmpty();
+    }
+
+    @Test
+    void findHistoryByAssetIdShouldIsolateDifferentAssets() {
+        repository.save(new PriceChangeEvent(
+                "asset-1",
+                "market-1",
+                "condition-1",
+                "slug-1",
+                "Question 1?",
+                "Yes",
+                new BigDecimal("0.40000000"),
+                new BigDecimal("0.42000000"),
+                PriceSource.BEST_BID_ASK,
+                Instant.parse("2026-04-01T10:15:30Z")
+        ));
+
+        repository.save(new PriceChangeEvent(
+                "asset-2",
+                "market-2",
+                "condition-2",
+                "slug-2",
+                "Question 2?",
+                "No",
+                new BigDecimal("0.50000000"),
+                new BigDecimal("0.55000000"),
+                PriceSource.LAST_TRADE,
+                Instant.parse("2026-04-01T10:16:30Z")
+        ));
+
+        List<PriceChangeEvent> asset1Events = repository.findHistoryByAssetId("asset-1");
+        List<PriceChangeEvent> asset2Events = repository.findHistoryByAssetId("asset-2");
+
+        assertThat(asset1Events).hasSize(1);
+        assertThat(asset1Events.get(0).getAssetId()).isEqualTo("asset-1");
+        assertThat(asset2Events).hasSize(1);
+        assertThat(asset2Events.get(0).getAssetId()).isEqualTo("asset-2");
+    }
 }

@@ -56,7 +56,6 @@ public class PriceTrackingService {
         Objects.requireNonNull(observedAt, "observedAt must not be null");
 
         ReentrantLock assetLock = priceTrackingLockManager.acquire(trackedMarket.assetId());
-        boolean releaseAfterTransactionCompletion = false;
 
         try {
             BigDecimal normalizedPrice = normalizePrice(observedPrice);
@@ -69,17 +68,18 @@ public class PriceTrackingService {
 
             Optional<TrackedPrice> previousPrice = priceStateStore.findByAssetId(trackedMarket.assetId());
             if (previousPrice.isEmpty()) {
-                priceStateStore.save(newTrackedPrice);
+                scheduleSaveStateAfterCommit(newTrackedPrice, assetLock);
                 return PriceTrackingResult.initialized(trackedMarket.assetId());
             }
 
             TrackedPrice previousTrackedPrice = previousPrice.get();
             if (priceObservationPolicy.shouldIgnore(previousTrackedPrice, priceSource, observedAt)) {
+                assetLock.unlock();
                 return PriceTrackingResult.stale(trackedMarket.assetId());
             }
 
             if (previousTrackedPrice.price().compareTo(normalizedPrice) == 0) {
-                priceStateStore.save(newTrackedPrice);
+                scheduleSaveStateAfterCommit(newTrackedPrice, assetLock);
                 return PriceTrackingResult.unchanged(trackedMarket.assetId());
             }
 
@@ -96,17 +96,15 @@ public class PriceTrackingService {
                     observedAt
             ));
 
-            saveStateAfterCommit(newTrackedPrice, assetLock);
-            releaseAfterTransactionCompletion = true;
+            scheduleSaveStateAfterCommit(newTrackedPrice, assetLock);
             return PriceTrackingResult.changed(trackedMarket.assetId(), savedEvent.getId());
-        } finally {
-            if (!releaseAfterTransactionCompletion) {
-                assetLock.unlock();
-            }
+        } catch (Throwable ex) {
+            assetLock.unlock();
+            throw ex;
         }
     }
 
-    private void saveStateAfterCommit(TrackedPrice trackedPrice, ReentrantLock assetLock) {
+    private void scheduleSaveStateAfterCommit(TrackedPrice trackedPrice, ReentrantLock assetLock) {
         // Unit tests call the service without an active transaction. In that case
         // we update the in-memory state immediately instead of waiting for afterCommit.
         if (!TransactionSynchronizationManager.isSynchronizationActive()) {

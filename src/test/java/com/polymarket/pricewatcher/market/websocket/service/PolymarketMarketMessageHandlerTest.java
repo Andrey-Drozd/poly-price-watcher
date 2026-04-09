@@ -77,6 +77,68 @@ class PolymarketMarketMessageHandlerTest {
         verify(priceTrackingService, never()).registerPrice(any(), any(), any(), any());
     }
 
+    @Test
+    void shouldIgnoreMalformedJsonPayload() {
+        ConfiguredTrackedMarketService trackedMarketService = new ConfiguredTrackedMarketService(properties(List.of(
+                market("asset-1", "market-1", "condition-1", "slug-1", "Question 1?", "Yes"),
+                market("asset-2", "market-2", "condition-2", "slug-2", "Question 2?", "No"),
+                market("asset-3", "market-3", "condition-3", "slug-3", "Question 3?", "Yes")
+        )));
+        PolymarketMarketMessageHandler handler = new PolymarketMarketMessageHandler(parser, priceTrackingService, trackedMarketService);
+
+        handler.handlePayload("not valid json{{{");
+
+        verify(priceTrackingService, never()).registerPrice(any(), any(), any(), any());
+    }
+
+    @Test
+    void shouldIgnorePayloadWithMissingEventType() {
+        ConfiguredTrackedMarketService trackedMarketService = new ConfiguredTrackedMarketService(properties(List.of(
+                market("asset-1", "market-1", "condition-1", "slug-1", "Question 1?", "Yes"),
+                market("asset-2", "market-2", "condition-2", "slug-2", "Question 2?", "No"),
+                market("asset-3", "market-3", "condition-3", "slug-3", "Question 3?", "Yes")
+        )));
+        PolymarketMarketMessageHandler handler = new PolymarketMarketMessageHandler(parser, priceTrackingService, trackedMarketService);
+
+        handler.handlePayload("""
+                {
+                  "asset_id": "asset-1",
+                  "price": "0.50"
+                }
+                """);
+
+        verify(priceTrackingService, never()).registerPrice(any(), any(), any(), any());
+    }
+
+    @Test
+    void shouldForwardLastTradePriceToPriceTrackingService() {
+        ConfiguredTrackedMarketService trackedMarketService = new ConfiguredTrackedMarketService(properties(List.of(
+                market("asset-1", "market-1", "condition-1", "slug-1", "Question 1?", "Yes"),
+                market("asset-2", "market-2", "condition-2", "slug-2", "Question 2?", "No"),
+                market("asset-3", "market-3", "condition-3", "slug-3", "Question 3?", "Yes")
+        )));
+        PolymarketMarketMessageHandler handler = new PolymarketMarketMessageHandler(parser, priceTrackingService, trackedMarketService);
+
+        when(priceTrackingService.registerPrice(any(), any(), any(), any()))
+                .thenReturn(new PriceTrackingResult(PriceTrackingStatus.CHANGED, "asset-1", 1L));
+
+        handler.handlePayload("""
+                {
+                  "event_type": "last_trade_price",
+                  "asset_id": "asset-1",
+                  "price": "0.55",
+                  "timestamp": "1766789469958"
+                }
+                """);
+
+        verify(priceTrackingService).registerPrice(
+                eq(trackedMarketService.getTrackedMarkets().get(0)),
+                eq(new BigDecimal("0.55")),
+                eq(PriceSource.LAST_TRADE),
+                eq(Instant.ofEpochMilli(1766789469958L))
+        );
+    }
+
     private PolymarketProperties properties(List<PolymarketProperties.ConfiguredMarket> trackedMarkets) {
         PolymarketProperties properties = new PolymarketProperties();
         properties.getWebsocket().setEnabled(false);

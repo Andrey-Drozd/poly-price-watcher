@@ -15,7 +15,10 @@ import java.util.List;
 @ConfigurationProperties(prefix = "polymarket")
 public class PolymarketProperties {
 
+    @Valid
     private final Websocket websocket = new Websocket();
+
+    @Valid
     private final Markets markets = new Markets();
 
     public Websocket getWebsocket() {
